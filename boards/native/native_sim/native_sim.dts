@@ -26,6 +26,7 @@
 		zephyr,code-partition = &slot0_partition;
 		zephyr,bt-hci = &bt_hci_userchan;
 		zephyr,touch = &input_sdl_touch;
+		zephyr,ipc = &ipm0;
 	};
 
 	aliases {
@@ -57,6 +58,14 @@
 			compatible = "zephyr,native-sim-cpu";
 			reg = <0>;
 		};
+	};
+
+	ipm0: ipm_emul {
+		compatible = "zephyr,ipm-net-emul";
+		ip = "localhost";
+		port = <12000>;
+		is-master;
+		status = "okay";
 	};
 
 	flashcontroller0: flash-controller@0 {

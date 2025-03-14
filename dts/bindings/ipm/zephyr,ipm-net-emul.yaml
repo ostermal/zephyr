@@ -1,0 +1,26 @@
+# Copyright (c) 2025 Lukas Ostermann
+# SPDX-License-Identifier: Apache-2.0
+
+description: Inter-processor message service for simulators using the host network stack
+
+compatible: "zephyr,ipm-net-emul"
+
+include: base.yaml
+
+properties:
+  ip:
+    type: string
+    default: "localhost"
+    required: true
+    description: IP address to use for the IPM endpoint
+  port:
+    type: int
+    default: 12000
+    required: true
+    description: Port to use for the IPM endpoint
+  is-master:
+    type: boolean
+    required: true
+    description: |
+      If true, opens a new IPM endpoint and waits for incoming connections.
+      If false, attempts to connect to the IPM endpoint specified.
