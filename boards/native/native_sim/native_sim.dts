@@ -62,8 +62,8 @@
 
 	ipm0: ipm_emul {
 		compatible = "zephyr,ipm-net-emul";
-		ip = "localhost";
-		port = <12000>;
+		ip = "127.0.0.1";
+		port = <50000>;
 		is-master;
 		status = "okay";
 	};

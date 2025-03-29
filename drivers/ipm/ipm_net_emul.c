@@ -10,6 +10,7 @@
 #include <zephyr/drivers/ipm.h>
 #include <zephyr/logging/log.h>
 
+#include <arpa/inet.h>
 #include <stdint.h>
 
 LOG_MODULE_REGISTER(ipm_net_emul, CONFIG_IPM_LOG_LEVEL);
@@ -21,12 +22,60 @@ struct ipm_net_emul_config {
 };
 
 struct ipm_net_emul_data {
-    int test;
+    int sock_fd;
+    struct sockaddr_in address;
 };
+
+/**
+ * @brief Register and configure the socket on the host
+ *
+ * @param data Private data of this instance of the device
+ * @return 0 if successful, negative error code otherwise
+ */
+static int ipm_net_emul_init_socket(struct ipm_net_emul_data *data)
+{
+    const int opt = 1;
+
+    /* Create socket file descriptor */
+    data->sock_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (data->sock_fd < 0) {
+        LOG_ERR("Failed to create socket in the host network stack");
+        return -EAGAIN;
+    }
+
+    /* Allow immediate reuse of the address upon restart */
+    if (setsockopt(data->sock_fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&opt, sizeof(opt)) != 0) {
+        LOG_ERR("Failed to set socket options");
+        return -EAGAIN;
+    }
+
+    return 0;
+}
 
 static int ipm_net_emul_init(const struct device *dev)
 {
-    LOG_DBG("initialising net emul driver");
+    struct ipm_net_emul_data *data = (struct ipm_net_emul_data *)dev->data;
+    struct ipm_net_emul_config *conf = (struct ipm_net_emul_config *)dev->config;
+
+    /* Register socket on the host */
+    if (ipm_net_emul_init_socket(data) != 0) {
+        return -EAGAIN;
+    }
+
+    /* Set socket options in master role */
+    if (conf->is_master) {
+        data->address.sin_family = AF_INET;
+        data->address.sin_addr.s_addr = INADDR_ANY;
+        data->address.sin_port = htons(conf->port);
+
+        if (bind(data->sock_fd, (struct sockaddr *)&data->address, sizeof(data->address)) < 0) {
+            LOG_ERR("Failed to bind socket in master role");
+            printk("bind failed\n");
+            return -EAGAIN;
+        }
+    }
+
+    LOG_DBG("Successfully initialized");
     return 0;
 }
 
@@ -68,10 +117,11 @@ static DEVICE_API(ipm, ipm_net_emul_driver_api) = {
 #define IPM_NET_EMUL_INIT(inst) \
     static const struct ipm_net_emul_config ipm_net_emul_cfg_##inst = { \
         .ip = DT_INST_PROP(inst, ip), \
-        .port = DT_INST_PROP(inst, port) \
+        .port = DT_INST_PROP(inst, port), \
+        .is_master = DT_INST_PROP(inst, is_master) \
     }; \
     static struct ipm_net_emul_data ipm_net_emul_data_##inst = { \
-        .test = 0 \
+        .sock_fd = -1 \
     }; \
     DEVICE_DT_INST_DEFINE(inst, \
                 ipm_net_emul_init, \
