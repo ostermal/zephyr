@@ -3,6 +3,12 @@
 
 if IPM_NET_EMUL
 
-# nothing yet
+config IPM_NET_EMUL_STACK_SIZE
+    int "Stack size in bytes of the connection handling thread"
+    default 4096
+
+config IPM_NET_EMUL_THREAD_PRIO
+    int "Priority of the connection handling thread"
+    default 2
 
 endif
